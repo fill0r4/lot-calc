@@ -1,31 +1,66 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Lot Calc</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#0c0c0c">
+<meta name="theme-color" content="#0c0c0c" id="theme-meta">
+<title>Lot Calc</title>
 <style>
-:root {
-  --bg: #0c0c0c;
-  --surface: #161616;
-  --surface2: #1e1e1e;
-  --border: #2a2a2a;
-  --green: #4ade80;
-  --green-dim: #0f1f0f;
-  --yellow: #facc15;
-  --red: #ef4444;
-  --text: #e8e8e0;
-  --muted: #777;
-  --faint: #444;
-  --radius: 14px;
-  --radius-sm: 10px;
+:root[data-theme="dark"] {
+  --bg:        #0c0c0c;
+  --surface:   #161616;
+  --surface2:  #1e1e1e;
+  --border:    #2a2a2a;
+  --border2:   #333;
+  --green:     #4ade80;
+  --green-bg:  #0f1f0f;
+  --yellow:    #facc15;
+  --yellow-bg: #181400;
+  --yellow-br: #302800;
+  --red:       #ef4444;
+  --red-bg:    #1c0808;
+  --red-br:    #5a1a1a;
+  --text:      #e8e8e0;
+  --muted:     #777;
+  --faint:     #444;
+  --focus-bg:  #141a14;
+  --card-alt:  #0a0f0a;
+  --toggle-bg: #1e1e1e;
+  --shadow:    rgba(0,0,0,0.4);
 }
+:root[data-theme="light"] {
+  --bg:        #f2f2f7;
+  --surface:   #ffffff;
+  --surface2:  #e8e8ed;
+  --border:    #d1d1d6;
+  --border2:   #c7c7cc;
+  --green:     #16a34a;
+  --green-bg:  #f0fdf4;
+  --yellow:    #b45309;
+  --yellow-bg: #fffbeb;
+  --yellow-br: #fde68a;
+  --red:       #dc2626;
+  --red-bg:    #fef2f2;
+  --red-br:    #fecaca;
+  --text:      #1c1c1e;
+  --muted:     #6b6b6b;
+  --faint:     #aeaeb2;
+  --focus-bg:  #f0fdf4;
+  --card-alt:  #f8fff8;
+  --toggle-bg: #e5e5ea;
+  --shadow:    rgba(0,0,0,0.08);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html {
+  font-size: 16px;
+  background: var(--bg);
+  transition: background 0.2s;
+}
 body {
   font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
   background: var(--bg);
@@ -35,10 +70,12 @@ body {
   flex-direction: column;
   padding-top: env(safe-area-inset-top, 0);
   padding-bottom: env(safe-area-inset-bottom, 0);
+  transition: background 0.2s, color 0.2s;
 }
 
+/* ── Header ── */
 .app-header {
-  padding: 18px 20px 14px;
+  padding: 16px 20px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -47,24 +84,54 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
+  transition: background 0.2s, border-color 0.2s;
 }
+.header-left { display: flex; align-items: center; gap: 10px; }
 .header-text .title { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; }
-.header-text .sub { font-size: 12px; color: var(--muted); margin-top: 1px; letter-spacing: 0.01em; }
+.header-text .sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+/* theme toggle */
+.theme-toggle {
+  width: 44px; height: 26px;
+  background: var(--toggle-bg);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+.theme-toggle-knob {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.2s, background 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+[data-theme="light"] .theme-toggle-knob { transform: translateX(18px); }
+.theme-icon { line-height: 1; }
+
 .reset-btn {
   background: var(--surface2);
   border: none;
   color: var(--muted);
   font-size: 13px;
   font-family: inherit;
-  padding: 8px 16px;
+  padding: 7px 14px;
   border-radius: 20px;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.12s, color 0.12s;
   touch-action: manipulation;
-  min-height: 36px;
+  min-height: 34px;
 }
 .reset-btn:active { background: var(--border); color: var(--text); }
 
+/* ── Scroll body ── */
 .scroll-body {
   flex: 1;
   padding: 20px 16px;
@@ -77,168 +144,117 @@ body {
 }
 
 .section-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11px; font-weight: 700;
   color: var(--faint);
   letter-spacing: 0.09em;
   text-transform: uppercase;
   margin-bottom: 10px;
 }
 
-/* instrument tiles */
-.instr-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
+/* ── Instrument tiles ── */
+.instr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .instr-tile {
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 14px;
   padding: 16px 14px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color 0.12s, background 0.12s, transform 0.08s;
   touch-action: manipulation;
-  min-height: 70px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  min-height: 68px;
+  display: flex; flex-direction: column; justify-content: center;
 }
-.instr-tile:active { transform: scale(0.96); transition: transform 0.08s; }
-.instr-tile.active { border-color: var(--green); background: var(--green-dim); }
+.instr-tile:active { transform: scale(0.96); }
+.instr-tile.active { border-color: var(--green); background: var(--green-bg); }
 .instr-tile .t-name { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
 .instr-tile .t-sub  { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .instr-tile.active .t-name { color: var(--green); }
-.instr-tile.active .t-sub  { color: #3a7a50; }
 
-/* input list card */
+/* ── Input card ── */
 .input-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 14px;
   overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
 }
 .irow {
-  display: flex;
-  align-items: center;
-  min-height: 56px;
-  padding: 0 18px;
+  display: flex; align-items: center;
+  min-height: 56px; padding: 0 18px; gap: 12px;
   border-bottom: 1px solid var(--border);
-  gap: 12px;
-  transition: background 0.1s;
+  transition: background 0.1s, border-color 0.2s;
 }
 .irow:last-child { border-bottom: none; }
-.irow:focus-within { background: #141a14; }
-.irow-label {
-  font-size: 15px;
-  color: var(--muted);
-  flex-shrink: 0;
-  min-width: 90px;
-}
+.irow:focus-within { background: var(--focus-bg); }
+.irow-label { font-size: 15px; color: var(--muted); flex-shrink: 0; min-width: 90px; }
 .irow input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-size: 17px;
-  font-weight: 500;
-  font-family: inherit;
-  text-align: right;
-  padding: 0;
-  min-width: 0;
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 17px; font-weight: 500;
+  font-family: inherit; text-align: right; padding: 0; min-width: 0;
   -moz-appearance: textfield;
 }
 .irow input::-webkit-inner-spin-button,
 .irow input::-webkit-outer-spin-button { -webkit-appearance: none; }
 .irow input::placeholder { color: var(--faint); font-weight: 400; }
-.irow-unit {
-  font-size: 14px;
-  color: var(--faint);
-  flex-shrink: 0;
-  margin-left: 4px;
-}
+.irow-unit { font-size: 14px; color: var(--faint); flex-shrink: 0; margin-left: 4px; }
 
-/* price row pair */
-.price-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
+/* ── Price pair ── */
+.price-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .price-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 14px;
   padding: 14px 16px 16px;
-  transition: background 0.1s;
+  transition: background 0.1s, border-color 0.2s;
 }
-.price-card:focus-within { background: #141a14; border-color: #3a3a3a; }
+.price-card:focus-within { background: var(--focus-bg); }
 .price-card-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  color: var(--muted);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 8px; color: var(--muted);
 }
-.price-card-label.sl { color: #c0503a; }
+.price-card-label.sl { color: var(--red); }
 .price-card input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-size: 20px;
-  font-weight: 600;
-  font-family: inherit;
-  padding: 0;
+  width: 100%; background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 20px; font-weight: 600;
+  font-family: inherit; padding: 0;
   -moz-appearance: textfield;
 }
 .price-card input::-webkit-inner-spin-button,
 .price-card input::-webkit-outer-spin-button { -webkit-appearance: none; }
 .price-card input::placeholder { color: var(--faint); font-weight: 400; font-size: 18px; }
 
-/* CTA */
+/* ── CTA ── */
 .calc-btn {
   width: 100%;
-  background: var(--green);
-  color: #000;
-  font-family: inherit;
-  font-size: 17px;
-  font-weight: 700;
-  padding: 18px;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  letter-spacing: -0.2px;
+  background: var(--green); color: #fff;
+  font-family: inherit; font-size: 17px; font-weight: 700;
+  padding: 18px; border: none; border-radius: 14px;
+  cursor: pointer; letter-spacing: -0.2px;
   touch-action: manipulation;
   transition: opacity 0.12s, transform 0.08s;
 }
+[data-theme="dark"] .calc-btn { color: #000; }
 .calc-btn:active { opacity: 0.82; transform: scale(0.98); }
 
-/* error */
+/* ── Error ── */
 .error-bar {
-  background: #1c0808;
-  border: 1px solid #5a1a1a;
-  border-radius: var(--radius-sm);
-  padding: 14px 16px;
-  font-size: 14px;
-  color: var(--red);
-  display: none;
-  align-items: center;
-  gap: 10px;
+  background: var(--red-bg); border: 1px solid var(--red-br);
+  border-radius: 10px; padding: 14px 16px;
+  font-size: 14px; color: var(--red);
+  display: none; align-items: center; gap: 10px;
 }
 .error-bar.show { display: flex; }
 
-/* result */
+/* ── Result card ── */
 .result-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  border-radius: 14px; overflow: hidden;
   display: none;
+  transition: background 0.2s, border-color 0.2s;
 }
 .result-card.show {
   display: block;
@@ -249,37 +265,74 @@ body {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* hero — best lot */
 .res-hero {
   padding: 22px 20px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: flex; justify-content: space-between; align-items: flex-start;
   border-bottom: 1px solid var(--border);
+  background: var(--green-bg);
+  transition: background 0.2s;
 }
-.res-hero-l {}
 .res-label { font-size: 11px; font-weight: 700; color: var(--faint); letter-spacing: 0.09em; text-transform: uppercase; margin-bottom: 6px; }
 .res-big { font-size: 56px; font-weight: 800; color: var(--green); letter-spacing: -3px; line-height: 1; }
-.res-unit { font-size: 20px; font-weight: 400; color: var(--green); opacity: 0.45; margin-left: 3px; letter-spacing: 0; }
-.res-note { font-size: 11px; color: var(--faint); margin-top: 7px; display: none; }
+.res-unit { font-size: 20px; font-weight: 400; color: var(--green); opacity: 0.5; margin-left: 3px; }
 
 .res-badge {
-  background: #181400;
-  border: 1px solid #302800;
-  border-radius: 12px;
-  padding: 12px 16px;
-  text-align: right;
-  flex-shrink: 0;
+  background: var(--yellow-bg); border: 1px solid var(--yellow-br);
+  border-radius: 12px; padding: 12px 16px; text-align: right; flex-shrink: 0;
 }
-.res-badge-label { font-size: 10px; font-weight: 700; color: #555; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+.res-badge-label { font-size: 10px; font-weight: 700; color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
 .res-badge-val { font-size: 24px; font-weight: 800; color: var(--yellow); letter-spacing: -0.5px; line-height: 1.1; }
 
+/* comparison section */
+.comp-section {
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  display: none;
+}
+.comp-section.show { display: block; }
+.comp-title { font-size: 11px; font-weight: 700; color: var(--faint); letter-spacing: 0.09em; text-transform: uppercase; margin-bottom: 10px; }
+.comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.comp-card {
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  padding: 12px 14px;
+  background: var(--bg);
+  transition: border-color 0.15s, background 0.2s;
+}
+.comp-card.best {
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+.comp-card-tag {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 6px;
+}
+.comp-card.best .comp-card-tag { color: var(--green); }
+.comp-lot { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -1px; line-height: 1; }
+.comp-card.best .comp-lot { color: var(--green); }
+.comp-unit { font-size: 13px; color: var(--muted); margin-left: 2px; font-weight: 400; }
+.comp-risk { font-size: 13px; color: var(--muted); margin-top: 5px; }
+.comp-risk strong { color: var(--text); font-weight: 600; }
+.comp-card.best .comp-risk strong { color: var(--green); }
+.comp-diff { font-size: 11px; color: var(--faint); margin-top: 3px; }
+.comp-best-badge {
+  display: inline-block;
+  background: var(--green); color: #000;
+  font-size: 9px; font-weight: 800;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 20px;
+  margin-bottom: 6px;
+}
+[data-theme="light"] .comp-best-badge { color: #fff; }
+
+/* detail rows */
 .res-rows {}
 .res-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
 }
 .res-row:last-child { border-bottom: none; }
 .res-row-k { font-size: 14px; color: var(--muted); }
@@ -295,7 +348,14 @@ body {
     <div class="title">Lot Calculator</div>
     <div class="sub">position sizing &amp; risk management</div>
   </div>
-  <button class="reset-btn" onclick="resetAll()">Reset</button>
+  <div class="header-actions">
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambia tema">
+      <div class="theme-toggle-knob">
+        <span class="theme-icon" id="theme-icon">☀️</span>
+      </div>
+    </button>
+    <button class="reset-btn" onclick="resetAll()">Reset</button>
+  </div>
 </div>
 
 <div class="scroll-body">
@@ -355,24 +415,46 @@ body {
   <button class="calc-btn" onclick="calculate()">Calcola lottaggio</button>
 
   <div class="error-bar" id="err-bar">
-    <span style="font-size:16px;flex-shrink:0;">&#9888;</span>
+    <span style="font-size:16px;flex-shrink:0;">⚠</span>
     <span id="err-msg"></span>
   </div>
 
   <div class="result-card" id="res-card">
+
+    <!-- HERO: best lot -->
     <div class="res-hero">
-      <div class="res-hero-l">
+      <div>
         <div class="res-label">Lottaggio consigliato</div>
         <div>
           <span class="res-big" id="res-lot">—</span><span class="res-unit">lots</span>
         </div>
-        <div class="res-note" id="res-note"></div>
       </div>
       <div class="res-badge">
         <div class="res-badge-label">Dollar risk</div>
         <div class="res-badge-val" id="res-risk">—</div>
       </div>
     </div>
+
+    <!-- COMPARISON: shown only for non-precise instruments -->
+    <div class="comp-section" id="comp-section">
+      <div class="comp-title">Confronto arrotondamenti</div>
+      <div class="comp-grid">
+        <div class="comp-card" id="comp-down">
+          <div class="comp-card-tag">↓ Per difetto</div>
+          <div><span class="comp-lot" id="cd-lot">—</span><span class="comp-unit">lots</span></div>
+          <div class="comp-risk">Risk: <strong id="cd-risk">—</strong></div>
+          <div class="comp-diff" id="cd-diff"></div>
+        </div>
+        <div class="comp-card" id="comp-up">
+          <div class="comp-card-tag">↑ Per eccesso</div>
+          <div><span class="comp-lot" id="cu-lot">—</span><span class="comp-unit">lots</span></div>
+          <div class="comp-risk">Risk: <strong id="cu-risk">—</strong></div>
+          <div class="comp-diff" id="cu-diff"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAIL ROWS -->
     <div class="res-rows">
       <div class="res-row">
         <span class="res-row-k">Strumento</span>
@@ -391,6 +473,7 @@ body {
         <span class="res-row-v" id="r-contract">—</span>
       </div>
     </div>
+
   </div>
 
   <div class="spacer"></div>
@@ -398,28 +481,47 @@ body {
 
 <script>
 const CFG = {
-  XAUUSD: { name:'XAUUSD', label:'Gold',     contractSize:100,  pipSize:0.01, pipValPerLot:1,  unit:'oz',     precise:false },
-  BTCUSD: { name:'BTCUSD', label:'Bitcoin',  contractSize:1,    pipSize:1,    pipValPerLot:1,  unit:'BTC',    precise:true  },
+  XAUUSD: { name:'XAUUSD', label:'Gold',      contractSize:100,  pipSize:0.01, pipValPerLot:1,  unit:'oz',     precise:false },
+  BTCUSD: { name:'BTCUSD', label:'Bitcoin',   contractSize:1,    pipSize:1,    pipValPerLot:1,  unit:'BTC',    precise:true  },
   USOIL:  { name:'USOIL.CASH', label:'Crude Oil', contractSize:1000, pipSize:0.01, pipValPerLot:10, unit:'barili', precise:false },
-  US500:  { name:'US500.CASH', label:'S&P 500', contractSize:1, pipSize:0.1,  pipValPerLot:1,  unit:'index',  precise:true  }
+  US500:  { name:'US500.CASH', label:'S&P 500',   contractSize:1, pipSize:0.1,  pipValPerLot:1,  unit:'index',  precise:true  }
 };
 
 let instrKey = null;
 
+// ── Theme ──
+let _theme = 'dark';
+try { _theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); } catch(e) {}
+setTheme(_theme);
+
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-icon').textContent = t === 'dark' ? '☀️' : '🌙';
+  const meta = document.getElementById('theme-meta');
+  if (meta) meta.setAttribute('content', t === 'dark' ? '#0c0c0c' : '#f2f2f7');
+  try { localStorage.setItem('theme', t); } catch(e) {}
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+
+// ── Instrument ──
 function pickInstr(el) {
   document.querySelectorAll('.instr-tile').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   instrKey = el.dataset.key;
 }
 
+// ── Risk calc ──
 function getRisk(key, lots, pipDist, pDiff) {
   if (key==='XAUUSD') return lots * pipDist * CFG[key].pipValPerLot;
-  if (key==='BTCUSD') return lots * pDiff * CFG[key].contractSize;
+  if (key==='BTCUSD') return lots * pDiff  * CFG[key].contractSize;
   if (key==='USOIL')  return lots * pipDist * CFG[key].pipValPerLot;
-  if (key==='US500')  return lots * pDiff * CFG[key].contractSize;
+  if (key==='US500')  return lots * pDiff  * CFG[key].contractSize;
 }
 
-function err(m) {
+function showErr(m) {
   document.getElementById('err-msg').textContent = m;
   document.getElementById('err-bar').classList.add('show');
 }
@@ -433,56 +535,85 @@ function calculate() {
   const entry   = parseFloat(document.getElementById('entry').value);
   const exitP   = parseFloat(document.getElementById('exitp').value);
 
-  if (!instrKey)                return err('Seleziona uno strumento.');
-  if (!capital || capital <= 0) return err('Inserisci un capitale valido.');
-  if (!riskPct || riskPct <= 0) return err('Inserisci un risk % valido (es. 1.00).');
-  if (!entry || entry <= 0)     return err('Inserisci un entry price.');
-  if (!exitP || exitP <= 0)     return err('Inserisci uno SL / exit price.');
-  if (entry === exitP)          return err('Entry e SL non possono coincidere.');
+  if (!instrKey)                return showErr('Seleziona uno strumento.');
+  if (!capital || capital <= 0) return showErr('Inserisci un capitale valido.');
+  if (!riskPct || riskPct <= 0) return showErr('Inserisci un risk % valido (es. 1.00).');
+  if (!entry || entry <= 0)     return showErr('Inserisci un entry price.');
+  if (!exitP || exitP <= 0)     return showErr('Inserisci uno SL / exit price.');
+  if (entry === exitP)          return showErr('Entry e SL non possono coincidere.');
 
-  const c        = CFG[instrKey];
-  const dollarR  = capital * riskPct / 100;
-  const pDiff    = Math.abs(entry - exitP);
+  const c       = CFG[instrKey];
+  const target  = capital * riskPct / 100;
+  const pDiff   = Math.abs(entry - exitP);
 
   let pipDist, lotsRaw;
-  if (instrKey==='XAUUSD') { pipDist=pDiff/c.pipSize; lotsRaw=dollarR/(pipDist*c.pipValPerLot); }
-  if (instrKey==='BTCUSD') { pipDist=pDiff;            lotsRaw=dollarR/(pDiff*c.contractSize); }
-  if (instrKey==='USOIL')  { pipDist=pDiff/c.pipSize;  lotsRaw=dollarR/(pipDist*c.pipValPerLot); }
-  if (instrKey==='US500')  { pipDist=pDiff/c.pipSize;  lotsRaw=dollarR/(pDiff*c.contractSize); }
+  if (instrKey==='XAUUSD') { pipDist=pDiff/c.pipSize; lotsRaw=target/(pipDist*c.pipValPerLot); }
+  if (instrKey==='BTCUSD') { pipDist=pDiff;            lotsRaw=target/(pDiff*c.contractSize); }
+  if (instrKey==='USOIL')  { pipDist=pDiff/c.pipSize;  lotsRaw=target/(pipDist*c.pipValPerLot); }
+  if (instrKey==='US500')  { pipDist=pDiff/c.pipSize;  lotsRaw=target/(pDiff*c.contractSize); }
 
-  let lots, actualR, note = '';
+  let bestLots, bestRisk;
+
+  const compSection = document.getElementById('comp-section');
+
   if (c.precise) {
-    lots   = Math.round(lotsRaw * 100) / 100;
-    actualR = getRisk(instrKey, lots, pipDist, pDiff);
+    bestLots = Math.round(lotsRaw * 100) / 100;
+    bestRisk = getRisk(instrKey, bestLots, pipDist, pDiff);
+    compSection.classList.remove('show');
   } else {
     const step = 0.01;
-    const ld = Math.floor(lotsRaw / step) * step;
-    const lu = +(ld + step).toFixed(4);
-    const rd = getRisk(instrKey, ld, pipDist, pDiff);
-    const ru = getRisk(instrKey, lu, pipDist, pDiff);
-    if (Math.abs(ru - dollarR) <= Math.abs(rd - dollarR)) {
-      lots=lu; actualR=ru; note='↑ arrotondato su — più vicino al target';
-    } else {
-      lots=ld; actualR=rd; note='↓ arrotondato giù — più vicino al target';
-    }
+    const ld   = +(Math.floor(lotsRaw / step) * step).toFixed(4);
+    const lu   = +(ld + step).toFixed(4);
+    const rd   = getRisk(instrKey, ld, pipDist, pDiff);
+    const ru   = getRisk(instrKey, lu, pipDist, pDiff);
+    const dDown = Math.abs(rd - target);
+    const dUp   = Math.abs(ru - target);
+    const bestIsUp = dUp <= dDown;
+
+    bestLots = bestIsUp ? lu : ld;
+    bestRisk = bestIsUp ? ru : rd;
+
+    // fill comparison cards
+    const cdCard = document.getElementById('comp-down');
+    const cuCard = document.getElementById('comp-up');
+
+    // reset classes
+    cdCard.classList.remove('best'); cuCard.classList.remove('best');
+    // remove existing badges
+    cdCard.querySelector('.comp-best-badge') && cdCard.querySelector('.comp-best-badge').remove();
+    cuCard.querySelector('.comp-best-badge') && cuCard.querySelector('.comp-best-badge').remove();
+
+    document.getElementById('cd-lot').textContent  = ld.toFixed(2);
+    document.getElementById('cd-risk').textContent = '$'+rd.toFixed(2);
+    document.getElementById('cd-diff').textContent = 'Δ $'+Math.abs(rd-target).toFixed(2)+' dal target';
+
+    document.getElementById('cu-lot').textContent  = lu.toFixed(2);
+    document.getElementById('cu-risk').textContent = '$'+ru.toFixed(2);
+    document.getElementById('cu-diff').textContent = 'Δ $'+Math.abs(ru-target).toFixed(2)+' dal target';
+
+    const bestCard = bestIsUp ? cuCard : cdCard;
+    bestCard.classList.add('best');
+    const badge = document.createElement('div');
+    badge.className = 'comp-best-badge';
+    badge.textContent = 'Consigliato';
+    bestCard.insertBefore(badge, bestCard.firstChild);
+
+    compSection.classList.add('show');
   }
 
+  // pip display
   let pipValTxt, pipDistTxt;
-  if (instrKey==='XAUUSD') { pipValTxt='$1.00 / pip per lot'; pipDistTxt=pipDist.toFixed(0)+' pips ($'+pDiff.toFixed(2)+')'; }
-  if (instrKey==='BTCUSD') { pipValTxt='$1.00 / $1 move per lot'; pipDistTxt='$'+pDiff.toFixed(2); }
-  if (instrKey==='USOIL')  { pipValTxt='$10.00 / pip per lot'; pipDistTxt=pipDist.toFixed(0)+' pips ($'+pDiff.toFixed(2)+')'; }
-  if (instrKey==='US500')  { pipValTxt='$1.00 / punto per lot'; pipDistTxt=pDiff.toFixed(1)+' punti'; }
+  if (instrKey==='XAUUSD') { pipValTxt='$1.00 / pip per lot';       pipDistTxt=pipDist.toFixed(0)+' pips ($'+pDiff.toFixed(2)+')'; }
+  if (instrKey==='BTCUSD') { pipValTxt='$1.00 / $1 move per lot';   pipDistTxt='$'+pDiff.toFixed(2); }
+  if (instrKey==='USOIL')  { pipValTxt='$10.00 / pip per lot';      pipDistTxt=pipDist.toFixed(0)+' pips ($'+pDiff.toFixed(2)+')'; }
+  if (instrKey==='US500')  { pipValTxt='$1.00 / punto per lot';     pipDistTxt=pDiff.toFixed(1)+' punti'; }
 
-  document.getElementById('res-lot').textContent    = lots.toFixed(2);
-  document.getElementById('res-risk').textContent   = '$'+actualR.toFixed(2);
+  document.getElementById('res-lot').textContent    = bestLots.toFixed(2);
+  document.getElementById('res-risk').textContent   = '$'+bestRisk.toFixed(2);
   document.getElementById('r-instr').textContent    = c.name+' — '+c.label;
   document.getElementById('r-pips').textContent     = pipDistTxt;
   document.getElementById('r-pipval').textContent   = pipValTxt;
   document.getElementById('r-contract').textContent = c.contractSize+' '+c.unit+' / lot';
-
-  const noteEl = document.getElementById('res-note');
-  noteEl.textContent   = note;
-  noteEl.style.display = note ? 'block' : 'none';
 
   document.getElementById('res-card').classList.add('show');
   setTimeout(() => document.getElementById('res-card').scrollIntoView({behavior:'smooth', block:'nearest'}), 80);
@@ -494,11 +625,12 @@ function resetAll() {
   ['capital','risk','entry','exitp'].forEach(id => document.getElementById(id).value='');
   document.getElementById('err-bar').classList.remove('show');
   document.getElementById('res-card').classList.remove('show');
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
 document.addEventListener('keydown', e => { if (e.key==='Enter') calculate(); });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 </script>
-<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js");}</script>
 </body>
 </html>
