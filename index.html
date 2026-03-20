@@ -315,12 +315,12 @@ body {
   <div>
     <div class="section-label">Conto e rischio</div>
     <div class="input-card">
-      <div class="irow" onclick="openPad('capital')" id="row-capital">
+      <div class="irow" ontouchstart="event.preventDefault();openPad('capital')" onclick="openPad('capital')" id="row-capital">
         <span class="irow-label">Capitale</span>
         <span class="irow-val placeholder" id="disp-capital">10000</span>
         <span class="irow-unit">USD</span>
       </div>
-      <div class="irow" onclick="openPad('risk')" id="row-risk">
+      <div class="irow" ontouchstart="event.preventDefault();openPad('risk')" onclick="openPad('risk')" id="row-risk">
         <span class="irow-label">Rischio</span>
         <span class="irow-val placeholder" id="disp-risk">1.00</span>
         <span class="irow-unit">%</span>
@@ -331,11 +331,11 @@ body {
   <div>
     <div class="section-label">Prezzi</div>
     <div class="price-pair">
-      <div class="price-card" onclick="openPad('entry')" id="row-entry">
+      <div class="price-card" ontouchstart="event.preventDefault();openPad('entry')" onclick="openPad('entry')" id="row-entry">
         <div class="price-card-label">Entry</div>
         <div class="price-val placeholder" id="disp-entry">0.00</div>
       </div>
-      <div class="price-card" onclick="openPad('exitp')" id="row-exitp">
+      <div class="price-card" ontouchstart="event.preventDefault();openPad('exitp')" onclick="openPad('exitp')" id="row-exitp">
         <div class="price-card-label sl">SL / Exit</div>
         <div class="price-val placeholder" id="disp-exitp">0.00</div>
       </div>
@@ -388,31 +388,36 @@ body {
 </div>
 
 <!-- NUMPAD OVERLAY -->
-<div class="pad-overlay" id="pad-overlay" onclick="overlayTap(event)">
-  <div class="pad-sheet">
+<div class="pad-overlay" id="pad-overlay" ontouchstart="overlayTap(event)" onclick="overlayTap(event)">
+  <div class="pad-sheet" ontouchstart="event.stopPropagation()">
     <div class="pad-display">
       <span class="pad-display-label" id="pad-label">—</span>
       <span class="pad-display-val cursor" id="pad-val">—</span>
     </div>
     <div class="pad-grid">
-      <button class="pad-key" onclick="padKey('7')">7</button>
-      <button class="pad-key" onclick="padKey('8')">8</button>
-      <button class="pad-key" onclick="padKey('9')">9</button>
-      <button class="pad-key" onclick="padKey('4')">4</button>
-      <button class="pad-key" onclick="padKey('5')">5</button>
-      <button class="pad-key" onclick="padKey('6')">6</button>
-      <button class="pad-key" onclick="padKey('1')">1</button>
-      <button class="pad-key" onclick="padKey('2')">2</button>
-      <button class="pad-key" onclick="padKey('3')">3</button>
-      <button class="pad-key special" onclick="padKey('.')">.</button>
-      <button class="pad-key" onclick="padKey('0')">0</button>
-      <button class="pad-key special" onclick="padBackspace()">⌫</button>
-      <button class="pad-key confirm" style="grid-column:1/-1;height:56px;" onclick="padConfirm()">Conferma ✓</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'7')" onclick="padKey('7')">7</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'8')" onclick="padKey('8')">8</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'9')" onclick="padKey('9')">9</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'4')" onclick="padKey('4')">4</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'5')" onclick="padKey('5')">5</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'6')" onclick="padKey('6')">6</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'1')" onclick="padKey('1')">1</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'2')" onclick="padKey('2')">2</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'3')" onclick="padKey('3')">3</button>
+      <button class="pad-key special" tabindex="-1" ontouchend="e2p(event,'.')" onclick="padKey('.')">.</button>
+      <button class="pad-key" tabindex="-1" ontouchend="e2p(event,'0')" onclick="padKey('0')">0</button>
+      <button class="pad-key special" tabindex="-1" ontouchend="e2pb(event)" onclick="padBackspace()">⌫</button>
+      <button class="pad-key confirm" tabindex="-1" style="grid-column:1/-1;height:56px;" ontouchend="e2pc(event)" onclick="padConfirm()">Conferma ✓</button>
     </div>
   </div>
 </div>
 
 <script>
+// ── Touch helpers (prevent iOS keyboard) ──
+function e2p(e, k) { e.preventDefault(); padKey(k); }
+function e2pb(e)    { e.preventDefault(); padBackspace(); }
+function e2pc(e)    { e.preventDefault(); padConfirm(); }
+
 // ── State ──
 const vals = { capital:'', risk:'', entry:'', exitp:'' };
 const labels = { capital:'Capitale (USD)', risk:'Rischio (%)', entry:'Entry price', exitp:'SL / Exit price' };
