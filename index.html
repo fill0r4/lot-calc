@@ -530,10 +530,11 @@ function calculate() {
   document.getElementById('err-bar').classList.remove('show');
   document.getElementById('res-card').classList.remove('show');
 
-  const capital = parseFloat(document.getElementById('capital').value);
-  const riskPct = parseFloat(document.getElementById('risk').value);
-  const entry   = parseFloat(document.getElementById('entry').value);
-  const exitP   = parseFloat(document.getElementById('exitp').value);
+  const toNum = id => parseFloat(document.getElementById(id).value.replace(',', '.'));
+  const capital = toNum('capital');
+  const riskPct = toNum('risk');
+  const entry   = toNum('entry');
+  const exitP   = toNum('exitp');
 
   if (!instrKey)                return showErr('Seleziona uno strumento.');
   if (!capital || capital <= 0) return showErr('Inserisci un capitale valido.');
