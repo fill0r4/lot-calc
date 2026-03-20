@@ -295,27 +295,29 @@ body {
 </div>
 
 <script>
-// ── Comma intercept: replace comma with dot in real time ──
+// ── Comma intercept: Safari-compatible ──
 ['capital','risk','entry','exitp'].forEach(id => {
   const el = document.getElementById(id);
-  el.addEventListener('input', function() {
-    const pos = this.selectionStart;
-    const old = this.value;
-    const neu = old.replace(/,/g, '.');
-    if (neu !== old) {
-      this.value = neu;
-      // restore cursor position
-      try { this.setSelectionRange(pos, pos); } catch(e) {}
+
+  // beforeinput fires BEFORE the char is inserted — works on Safari iOS
+  el.addEventListener('beforeinput', function(e) {
+    if (e.data === ',') {
+      e.preventDefault();
+      const start = this.selectionStart;
+      const end   = this.selectionEnd;
+      const v     = this.value;
+      this.value  = v.slice(0, start) + '.' + v.slice(end);
+      this.setSelectionRange(start + 1, start + 1);
     }
   });
-  // also catch on keypress for instant feedback
-  el.addEventListener('keypress', function(e) {
-    if (e.key === ',') {
-      e.preventDefault();
-      const pos = this.selectionStart;
-      const v = this.value;
-      this.value = v.slice(0, pos) + '.' + v.slice(this.selectionEnd);
-      this.setSelectionRange(pos + 1, pos + 1);
+
+  // fallback: input event for any remaining commas
+  el.addEventListener('input', function() {
+    const pos = this.selectionStart;
+    const neu = this.value.replace(/,/g, '.');
+    if (neu !== this.value) {
+      this.value = neu;
+      try { this.setSelectionRange(pos, pos); } catch(e) {}
     }
   });
 });
