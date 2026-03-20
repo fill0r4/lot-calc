@@ -387,12 +387,12 @@ body {
     <div class="input-card">
       <div class="irow">
         <label class="irow-label" for="capital">Capitale</label>
-        <input id="capital" type="number" inputmode="decimal" placeholder="10000" min="0" step="any" autocomplete="off">
+        <input id="capital" type="text" inputmode="decimal" placeholder="10000" autocomplete="off">
         <span class="irow-unit">USD</span>
       </div>
       <div class="irow">
         <label class="irow-label" for="risk">Rischio</label>
-        <input id="risk" type="number" inputmode="decimal" placeholder="1.00" min="0.01" max="100" step="any" autocomplete="off">
+        <input id="risk" type="text" inputmode="decimal" placeholder="1.00" autocomplete="off">
         <span class="irow-unit">%</span>
       </div>
     </div>
@@ -403,11 +403,11 @@ body {
     <div class="price-pair">
       <div class="price-card">
         <div class="price-card-label">Entry</div>
-        <input id="entry" type="number" inputmode="decimal" placeholder="0.00" min="0" step="any" autocomplete="off">
+        <input id="entry" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
       </div>
       <div class="price-card">
         <div class="price-card-label sl">SL / Exit</div>
-        <input id="exitp" type="number" inputmode="decimal" placeholder="0.00" min="0" step="any" autocomplete="off">
+        <input id="exitp" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
       </div>
     </div>
   </div>
@@ -530,7 +530,7 @@ function calculate() {
   document.getElementById('err-bar').classList.remove('show');
   document.getElementById('res-card').classList.remove('show');
 
-  const toNum = id => parseFloat(document.getElementById(id).value.replace(',', '.'));
+  const toNum = id => parseFloat(document.getElementById(id).value.trim().replace(',', '.'));
   const capital = toNum('capital');
   const riskPct = toNum('risk');
   const entry   = toNum('entry');
