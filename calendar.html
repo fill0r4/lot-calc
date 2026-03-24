@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0c0c0c" id="theme-meta">
+<title>Calendario — Lot Calc</title>
+<style>
+:root[data-theme="dark"] {
+  --bg:#0c0c0c; --surface:#161616; --surface2:#1e1e1e; --border:#2a2a2a;
+  --green:#4ade80; --green-bg:#0f1f0f; --red:#ef4444; --red-bg:#1c0808; --red-br:#5a1a1a;
+  --red-soft:#2a0a0a; --text:#e8e8e0; --muted:#777; --faint:#444;
+  --toggle-bg:#1e1e1e; --day-bg:#111; --pill-bg:#2a2a2a; --pill-text:#aaa;
+}
+:root[data-theme="light"] {
+  --bg:#f2f2f7; --surface:#ffffff; --surface2:#e8e8ed; --border:#d1d1d6;
+  --green:#16a34a; --green-bg:#f0fdf4; --red:#dc2626; --red-bg:#fef2f2; --red-br:#fecaca;
+  --red-soft:#fff0f0; --text:#1c1c1e; --muted:#6b6b6b; --faint:#aeaeb2;
+  --toggle-bg:#e5e5ea; --day-bg:#f8f8fb; --pill-bg:#e8e8ed; --pill-text:#555;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html { font-size:16px; background:var(--bg); transition:background 0.2s; }
+body {
+  font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;
+  background:var(--bg); color:var(--text); min-height:100vh;
+  display:flex; flex-direction:column;
+  padding-top:env(safe-area-inset-top,0);
+  transition:background 0.2s,color 0.2s;
+}
+
+/* ── Header ── */
+.app-header {
+  padding:16px 20px 14px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--bg); position:sticky; top:0; z-index:10;
+  transition:background 0.2s,border-color 0.2s;
+}
+.header-text .title { font-size:18px; font-weight:700; letter-spacing:-0.4px; }
+.header-text .sub { font-size:12px; color:var(--muted); margin-top:1px; }
+.header-actions { display:flex; align-items:center; gap:8px; }
+
+.theme-toggle {
+  width:44px; height:26px; background:var(--toggle-bg); border:1px solid var(--border);
+  border-radius:13px; cursor:pointer; position:relative; transition:background 0.2s;
+  flex-shrink:0; touch-action:manipulation;
+}
+.theme-toggle-knob {
+  position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%;
+  background:var(--text); transition:transform 0.2s;
+  display:flex; align-items:center; justify-content:center; font-size:11px;
+}
+[data-theme="light"] .theme-toggle-knob { transform:translateX(18px); }
+
+/* ── Nav tabs ── */
+.nav-tabs {
+  display:flex; border-bottom:1px solid var(--border);
+  background:var(--bg); position:sticky; top:57px; z-index:9;
+  transition:background 0.2s;
+}
+.nav-tab {
+  flex:1; padding:12px 0; font-size:13px; font-weight:600;
+  color:var(--muted); text-align:center; cursor:pointer;
+  border-bottom:2px solid transparent; transition:color 0.15s, border-color 0.15s;
+  text-decoration:none; letter-spacing:0.02em;
+}
+.nav-tab.active { color:var(--green); border-bottom-color:var(--green); }
+
+/* ── Week nav ── */
+.week-nav {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px; max-width:560px; width:100%; margin:0 auto;
+}
+.week-label { font-size:14px; font-weight:600; color:var(--text); }
+.week-btn {
+  background:var(--surface2); border:none; color:var(--text); font-size:16px;
+  width:36px; height:36px; border-radius:10px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background 0.12s; touch-action:manipulation;
+}
+.week-btn:active { background:var(--border); }
+
+/* ── Body ── */
+.scroll-body {
+  flex:1; padding:0 16px 40px; display:flex; flex-direction:column;
+  gap:0; max-width:560px; width:100%; margin:0 auto;
+}
+
+/* ── Loading / empty ── */
+.status-box {
+  text-align:center; padding:48px 20px;
+  font-size:14px; color:var(--muted);
+}
+.spinner {
+  width:28px; height:28px; border:2.5px solid var(--border);
+  border-top-color:var(--green); border-radius:50%;
+  animation:spin 0.7s linear infinite; margin:0 auto 16px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Day group ── */
+.day-group { margin-bottom:4px; }
+.day-header {
+  padding:14px 0 8px; display:flex; align-items:center; gap:10px;
+}
+.day-name { font-size:13px; font-weight:700; color:var(--faint); letter-spacing:0.08em; text-transform:uppercase; }
+.day-date { font-size:13px; color:var(--muted); }
+.day-today { font-size:10px; font-weight:700; background:var(--green); color:#000; padding:2px 8px; border-radius:20px; letter-spacing:0.06em; text-transform:uppercase; }
+[data-theme="light"] .day-today { color:#fff; }
+
+/* ── Event card ── */
+.event-card {
+  background:var(--red-soft); border:1px solid var(--red-br);
+  border-left:3px solid var(--red); border-radius:12px;
+  padding:14px 16px; margin-bottom:8px;
+  transition:background 0.2s;
+}
+.event-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.event-time { font-size:15px; font-weight:700; color:var(--red); letter-spacing:-0.3px; flex-shrink:0; }
+.event-time.allday { font-size:12px; font-weight:600; color:var(--muted); padding-top:2px; }
+.event-currency {
+  font-size:11px; font-weight:700; letter-spacing:0.08em;
+  background:var(--red-bg); color:var(--red); border:1px solid var(--red-br);
+  padding:3px 8px; border-radius:6px; flex-shrink:0;
+}
+.event-title { font-size:14px; font-weight:600; color:var(--text); line-height:1.35; }
+.event-instruments { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.instr-pill {
+  font-size:11px; font-weight:600; letter-spacing:0.04em;
+  background:var(--pill-bg); color:var(--pill-text);
+  padding:3px 10px; border-radius:20px;
+}
+.instr-pill.primary {
+  background:var(--green-bg); color:var(--green);
+  border:1px solid var(--green);
+}
+
+.no-events {
+  padding:20px 0 12px; font-size:13px; color:var(--faint); text-align:center;
+}
+
+/* ── Error ── */
+.error-bar {
+  background:var(--red-bg); border:1px solid var(--red-br); border-radius:12px;
+  padding:16px; margin:16px 0; font-size:14px; color:var(--red);
+  display:none; align-items:flex-start; gap:10px;
+}
+.error-bar.show { display:flex; }
+
+/* ── Refresh btn ── */
+.refresh-row {
+  display:flex; justify-content:center; padding:16px 0 8px;
+}
+.refresh-btn {
+  background:var(--surface2); border:none; color:var(--muted); font-family:inherit;
+  font-size:13px; padding:8px 20px; border-radius:20px; cursor:pointer;
+  display:flex; align-items:center; gap:6px; transition:background 0.12s;
+}
+.refresh-btn:active { background:var(--border); }
+.refresh-icon { font-size:14px; }
+
+/* ── Legend ── */
+.legend {
+  display:flex; align-items:center; gap:8px; padding:0 0 16px;
+  font-size:12px; color:var(--muted);
+}
+.legend-dot { width:10px; height:10px; border-radius:50%; background:var(--red); flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-text">
+    <div class="title">Calendario News</div>
+    <div class="sub">solo eventi ad alto impatto</div>
+  </div>
+  <div class="header-actions">
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambia tema">
+      <div class="theme-toggle-knob"><span id="theme-icon">☀️</span></div>
+    </button>
+  </div>
+</div>
+
+<div class="nav-tabs">
+  <a class="nav-tab" href="index.html">Calcolatore</a>
+  <a class="nav-tab active" href="calendar.html">Calendario</a>
+</div>
+
+<div class="week-nav">
+  <button class="week-btn" onclick="changeWeek(-1)">‹</button>
+  <span class="week-label" id="week-label">—</span>
+  <button class="week-btn" onclick="changeWeek(1)">›</button>
+</div>
+
+<div class="scroll-body">
+  <div class="legend">
+    <div class="legend-dot"></div>
+    <span>Solo news rosse (alto impatto) · orario Roma</span>
+  </div>
+
+  <div class="error-bar" id="err-bar">
+    <span style="font-size:18px;flex-shrink:0;">⚠</span>
+    <div>
+      <div style="font-weight:600;margin-bottom:4px;">Impossibile caricare i dati</div>
+      <div id="err-msg" style="font-size:13px;opacity:0.8;"></div>
+    </div>
+  </div>
+
+  <div id="cal-body">
+    <div class="status-box">
+      <div class="spinner"></div>
+      Caricamento eventi in corso…
+    </div>
+  </div>
+
+  <div class="refresh-row">
+    <button class="refresh-btn" onclick="loadCalendar()">
+      <span class="refresh-icon">↺</span> Aggiorna
+    </button>
+  </div>
+</div>
+
+<script>
+// ── Theme ──
+let _t = 'dark';
+try { _t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark'); } catch(e) {}
+setTheme(_t);
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-icon').textContent = t==='dark' ? '☀️' : '🌙';
+  const m = document.getElementById('theme-meta');
+  if(m) m.setAttribute('content', t==='dark' ? '#0c0c0c' : '#f2f2f7');
+  try { localStorage.setItem('theme', t); } catch(e) {}
+}
+function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark'); }
+
+// ── Keyword rules: title patterns → specific instruments ──
+// Applied BEFORE the generic currency mapping
+// Each rule: { pattern: RegExp, primary: [...], secondary: [...] }
+const KEYWORD_RULES = [
+  // German-specific → GER40 primary
+  { p:/german|germany|ifo|zew|buba|bundesbank|destatis/i,
+    primary:['GER40'], secondary:['EURUSD','EURGBP'] },
+  // ECB / Euro area generic → broad EUR
+  { p:/ecb|european central bank|euro.?zone|euro.?area|eu |lagarde/i,
+    primary:['EURUSD','EURGBP','GER40'], secondary:[] },
+  // French-specific
+  { p:/french|france/i,
+    primary:['EURUSD','EURGBP'], secondary:['GER40'] },
+  // Italian-specific
+  { p:/italian|italy/i,
+    primary:['EURUSD'], secondary:['GER40','EURGBP'] },
+  // US equity / indices
+  { p:/nonfarm|non-farm|nfp|fed |fomc|powell|jobless|cpi|ppi|gdp|retail sales|ism|pmi/i,
+    primary:['US500','US100'], secondary:['EURUSD','XAUUSD','USOIL','BTCUSD'] },
+  // Oil-specific
+  { p:/crude|oil|opec|petroleum|eia|energy|inventori/i,
+    primary:['USOIL'], secondary:['US500'] },
+  // Gold / metals
+  { p:/gold|silver|metal/i,
+    primary:['XAUUSD'], secondary:[] },
+  // BTC / crypto
+  { p:/bitcoin|crypto|btc/i,
+    primary:['BTCUSD'], secondary:[] },
+  // BOE / UK
+  { p:/boe|bank of england|bailey|uk |united kingdom|british/i,
+    primary:['EURGBP'], secondary:['EURUSD'] },
+  // RBA / Australia
+  { p:/rba|reserve bank of australia|australian/i,
+    primary:['AUDJPY'], secondary:[] },
+  // BOJ / Japan
+  { p:/boj|bank of japan|ueda|japanese/i,
+    primary:['AUDJPY'], secondary:[] },
+];
+
+// ── Fallback currency → instruments (when no keyword rule matches) ──
+const CUR_TO_INSTR = {
+  USD: ['EURUSD','XAUUSD','BTCUSD','USOIL','US500','US100','AUDJPY'],
+  EUR: ['EURUSD','EURGBP','GER40'],
+  GBP: ['EURGBP'],
+  AUD: ['AUDJPY'],
+  JPY: ['AUDJPY'],
+  OIL: ['USOIL'],
+  ALL: []
+};
+const CUR_PRIMARY = {
+  USD: ['EURUSD','XAUUSD','USOIL','US500','US100'],
+  EUR: ['EURUSD','EURGBP','GER40'],
+  GBP: ['EURGBP'],
+  AUD: ['AUDJPY'],
+  JPY: ['AUDJPY'],
+};
+
+// ── Resolve instruments for an event ──
+function resolveInstruments(currency, title) {
+  for (const rule of KEYWORD_RULES) {
+    if (rule.p.test(title)) {
+      return { instrs: [...rule.primary, ...rule.secondary], primaries: rule.primary };
+    }
+  }
+  // fallback to currency
+  return {
+    instrs: CUR_TO_INSTR[currency] || [],
+    primaries: CUR_PRIMARY[currency] || []
+  };
+}
+
+// ── Week offset state ──
+let weekOffset = 0;
+
+function changeWeek(dir) {
+  weekOffset += dir;
+  loadCalendar();
+}
+
+function getWeekDates(offset) {
+  const now = new Date();
+  const day = now.getDay(); // 0=sun
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
+  monday.setHours(0,0,0,0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23,59,59,999);
+  return { monday, sunday };
+}
+
+function fmtWeekLabel(monday, sunday) {
+  const opts = { day:'numeric', month:'short' };
+  const loc = 'it-IT';
+  return monday.toLocaleDateString(loc, opts) + ' – ' + sunday.toLocaleDateString(loc, { ...opts, year:'numeric' });
+}
+
+// ── Fetch via allorigins proxy ──
+async function fetchFF(url) {
+  const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+  const res = await fetch(proxy, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.text();
+}
+
+// ── Parse XML ──
+function parseEvents(xmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'text/xml');
+  const items = Array.from(doc.querySelectorAll('event'));
+
+  return items
+    .filter(e => {
+      const impact = e.querySelector('impact')?.textContent?.trim();
+      return impact === 'High';
+    })
+    .map(e => ({
+      date:     e.querySelector('date')?.textContent?.trim() || '',
+      time:     e.querySelector('time')?.textContent?.trim() || '',
+      currency: e.querySelector('currency')?.textContent?.trim() || '',
+      title:    e.querySelector('title')?.textContent?.trim() || '',
+      impact:   'High'
+    }));
+}
+
+// ── Convert FF time (ET) to Rome time ──
+function toRomeTime(dateStr, timeStr) {
+  // FF dates: "01-20-2025", times: "8:30am" or "All Day" or "Tentative"
+  if (!timeStr || timeStr === 'All Day' || timeStr === 'Tentative' || timeStr === '') {
+    return { display: timeStr || 'Tutto il giorno', isAllDay: true, dateObj: null };
+  }
+
+  // parse date MM-DD-YYYY
+  const [m, d, y] = dateStr.split('-').map(Number);
+  // parse time "8:30am"
+  const match = timeStr.match(/^(\d+):(\d+)(am|pm)$/i);
+  if (!match) return { display: timeStr, isAllDay: false, dateObj: null };
+
+  let hours = parseInt(match[1]);
+  const mins = parseInt(match[2]);
+  const ampm = match[3].toLowerCase();
+  if (ampm === 'pm' && hours !== 12) hours += 12;
+  if (ampm === 'am' && hours === 12) hours = 0;
+
+  // Build date in ET (UTC-5 standard, UTC-4 DST)
+  // Use Intl to get correct conversion
+  const etDate = new Date(Date.UTC(y, m-1, d, hours, mins));
+  // ET offset: approximate — FF uses Eastern Time
+  // Add 5h for ET→UTC (winter) — Intl handles DST properly
+  const etOffset = getETOffset(etDate);
+  const utcMs = etDate.getTime() + etOffset * 60000;
+  const utcDate = new Date(utcMs);
+
+  // Format in Rome timezone
+  const romeStr = utcDate.toLocaleTimeString('it-IT', {
+    timeZone: 'Europe/Rome',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+
+  return { display: romeStr, isAllDay: false, dateObj: utcDate };
+}
+
+function getETOffset(date) {
+  // Returns minutes to add to ET to get UTC
+  // DST: second Sunday March → first Sunday November = UTC-4 (EDT)
+  // Otherwise UTC-5 (EST)
+  const y = date.getUTCFullYear();
+  // Second Sunday in March
+  const dstStart = nthSunday(y, 2, 2);
+  // First Sunday in November
+  const dstEnd   = nthSunday(y, 10, 1);
+  const isDST = date >= dstStart && date < dstEnd;
+  return isDST ? 4*60 : 5*60;
+}
+
+function nthSunday(year, month, n) {
+  // month: 0-indexed (2=March, 10=November)
+  const d = new Date(Date.UTC(year, month, 1, 2, 0, 0));
+  const dow = d.getUTCDay();
+  d.setUTCDate(1 + (7 - dow) % 7 + (n-1)*7);
+  return d;
+}
+
+// ── Group by date ──
+function groupByDate(events) {
+  const map = {};
+  events.forEach(ev => {
+    if (!map[ev.date]) map[ev.date] = [];
+    map[ev.date].push(ev);
+  });
+  return map;
+}
+
+// ── Render ──
+function renderCalendar(events, monday, sunday) {
+  const body = document.getElementById('cal-body');
+  if (!events.length) {
+    body.innerHTML = '<div class="status-box">Nessuna news ad alto impatto questa settimana.</div>';
+    return;
+  }
+
+  // filter to current week
+  const weekEvents = events.filter(ev => {
+    if (!ev.date) return false;
+    const [m,d,y] = ev.date.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    return dt >= monday && dt <= sunday;
+  });
+
+  if (!weekEvents.length) {
+    body.innerHTML = '<div class="status-box">Nessuna news ad alto impatto questa settimana.</div>';
+    return;
+  }
+
+  const grouped = groupByDate(weekEvents);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const days = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+  let html = '';
+
+  // Sort dates
+  const sortedDates = Object.keys(grouped).sort((a,b) => {
+    const [m1,d1,y1] = a.split('-').map(Number);
+    const [m2,d2,y2] = b.split('-').map(Number);
+    return new Date(y1,m1-1,d1) - new Date(y2,m2-1,d2);
+  });
+
+  sortedDates.forEach(dateStr => {
+    const [m,d,y] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    const isToday = dt.getTime() === today.getTime();
+    const dayName = days[dt.getDay()];
+    const dateLabel = d + ' ' + months[m-1];
+
+    html += `<div class="day-group">
+      <div class="day-header">
+        <span class="day-name">${dayName}</span>
+        <span class="day-date">${dateLabel} ${y}</span>
+        ${isToday ? '<span class="day-today">Oggi</span>' : ''}
+      </div>`;
+
+    // Sort by time
+    const dayEvents = grouped[dateStr].sort((a,b) => {
+      const ta = toRomeTime(a.date, a.time);
+      const tb = toRomeTime(b.date, b.time);
+      if (ta.isAllDay) return -1;
+      if (tb.isAllDay) return 1;
+      if (!ta.dateObj || !tb.dateObj) return 0;
+      return ta.dateObj - tb.dateObj;
+    });
+
+    dayEvents.forEach(ev => {
+      const { display, isAllDay } = toRomeTime(ev.date, ev.time);
+      const { instrs, primaries } = resolveInstruments(ev.currency, ev.title);
+
+      let pillsHtml = '';
+      if (instrs.length) {
+        instrs.forEach(ins => {
+          const isPrimary = primaries.includes(ins);
+          pillsHtml += `<span class="instr-pill${isPrimary?' primary':''}">${ins}</span>`;
+        });
+      }
+
+      html += `<div class="event-card">
+        <div class="event-top">
+          <span class="event-time${isAllDay?' allday':''}">${display}</span>
+          <span class="event-currency">${ev.currency}</span>
+        </div>
+        <div class="event-title">${ev.title}</div>
+        ${pillsHtml ? `<div class="event-instruments">${pillsHtml}</div>` : ''}
+      </div>`;
+    });
+
+    html += '</div>';
+  });
+
+  body.innerHTML = html;
+}
+
+// ── Main load ──
+async function loadCalendar() {
+  const body = document.getElementById('cal-body');
+  const errBar = document.getElementById('err-bar');
+  errBar.classList.remove('show');
+
+  body.innerHTML = '<div class="status-box"><div class="spinner"></div>Caricamento eventi…</div>';
+
+  const { monday, sunday } = getWeekDates(weekOffset);
+  document.getElementById('week-label').textContent = fmtWeekLabel(monday, sunday);
+
+  // Forex Factory provides thisweek and nextweek feeds
+  // For offsets we try both and filter
+  let url;
+  if (weekOffset === 0) url = 'https://nfs.faireconomy.media/ff_calendar_thisweek.xml';
+  else if (weekOffset === 1) url = 'https://nfs.faireconomy.media/ff_calendar_nextweek.xml';
+  else {
+    // For past/future weeks beyond next, show message
+    body.innerHTML = '<div class="status-box">Il feed di Forex Factory fornisce solo la settimana corrente e quella successiva.</div>';
+    return;
+  }
+
+  try {
+    const xml = await fetchFF(url);
+    const events = parseEvents(xml);
+    renderCalendar(events, monday, sunday);
+  } catch(err) {
+    body.innerHTML = '';
+    document.getElementById('err-msg').textContent = 'Errore: ' + err.message + '. Riprova tra qualche secondo.';
+    errBar.classList.add('show');
+  }
+}
+
+// ── Init ──
+loadCalendar();
+</script>
+</body>
+</html>

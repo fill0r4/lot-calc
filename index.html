@@ -55,6 +55,21 @@ body {
 }
 [data-theme="light"] .theme-toggle-knob { transform:translateX(18px); }
 
+
+/* ── Nav tabs ── */
+.nav-tabs {
+  display:flex; border-bottom:1px solid var(--border);
+  background:var(--bg); position:sticky; top:57px; z-index:9;
+  transition:background 0.2s;
+}
+.nav-tab {
+  flex:1; padding:12px 0; font-size:13px; font-weight:600;
+  color:var(--muted); text-align:center; cursor:pointer;
+  border-bottom:2px solid transparent; transition:color 0.15s,border-color 0.15s;
+  text-decoration:none; letter-spacing:0.02em;
+}
+.nav-tab.active { color:var(--green); border-bottom-color:var(--green); }
+
 .reset-btn {
   background:var(--surface2); border:none; color:var(--muted); font-size:13px;
   font-family:inherit; padding:7px 14px; border-radius:20px; cursor:pointer;
@@ -196,6 +211,11 @@ body {
     </button>
     <button class="reset-btn" onclick="resetAll()">Reset</button>
   </div>
+</div>
+
+<div class="nav-tabs">
+  <a class="nav-tab active" href="index.html">Calcolatore</a>
+  <a class="nav-tab" href="calendar.html">Calendario</a>
 </div>
 
 <div class="scroll-body">
