@@ -18,9 +18,10 @@
 }
 :root[data-theme="light"] {
   --bg:#f2f2f7; --surface:#ffffff; --surface2:#e8e8ed; --border:#d1d1d6;
-  --green:#16a34a; --green-bg:#f0fdf4; --red:#dc2626; --red-bg:#fef2f2; --red-br:#fecaca;
-  --red-soft:#fff0f0; --text:#1c1c1e; --muted:#6b6b6b; --faint:#aeaeb2;
+  --green:#16a34a; --green-bg:#f0fdf4; --acc:#d97706; --acc-bg:#fffbeb; --acc-br:#fde68a;
+  --acc-soft:#fffdf0; --text:#1c1c1e; --muted:#6b6b6b; --faint:#aeaeb2;
   --toggle-bg:#e5e5ea; --day-bg:#f8f8fb; --pill-bg:#e8e8ed; --pill-text:#555;
+  --past-bg:#f5f5f7; --past-br:#e5e5ea; --past-text:#aeaeb2; --past-border:#e5e5ea;
 }
 
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -114,17 +115,17 @@ body {
 
 /* ── Event card ── */
 .event-card {
-  background:var(--red-soft); border:1px solid var(--red-br);
-  border-left:3px solid var(--red); border-radius:12px;
+  background:var(--acc-soft); border:1px solid var(--acc-br);
+  border-left:3px solid var(--acc); border-radius:12px;
   padding:14px 16px; margin-bottom:8px;
   transition:background 0.2s;
 }
 .event-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
-.event-time { font-size:15px; font-weight:700; color:var(--red); letter-spacing:-0.3px; flex-shrink:0; }
+.event-time { font-size:15px; font-weight:700; color:var(--acc); letter-spacing:-0.3px; flex-shrink:0; }
 .event-time.allday { font-size:12px; font-weight:600; color:var(--muted); padding-top:2px; }
 .event-currency {
   font-size:11px; font-weight:700; letter-spacing:0.08em;
-  background:var(--red-bg); color:var(--red); border:1px solid var(--red-br);
+  background:var(--acc-bg); color:var(--acc); border:1px solid var(--acc-br);
   padding:3px 8px; border-radius:6px; flex-shrink:0;
 }
 .event-title { font-size:14px; font-weight:600; color:var(--text); line-height:1.35; }
@@ -139,14 +140,25 @@ body {
   border:1px solid var(--green);
 }
 
+
+.event-card.past {
+  background:var(--past-bg); border-color:var(--past-border);
+  border-left-color:var(--past-border); opacity:0.5;
+}
+.event-card.past .event-time { color:var(--past-text); }
+.event-card.past .event-title { color:var(--past-text); }
+.event-card.past .event-currency { background:transparent; color:var(--past-text); border-color:var(--past-border); }
+.event-card.past .instr-pill { opacity:0.4; }
+.event-card.past .instr-pill.primary { background:transparent; border-color:var(--past-border); color:var(--past-text); }
+
 .no-events {
   padding:20px 0 12px; font-size:13px; color:var(--faint); text-align:center;
 }
 
 /* ── Error ── */
 .error-bar {
-  background:var(--red-bg); border:1px solid var(--red-br); border-radius:12px;
-  padding:16px; margin:16px 0; font-size:14px; color:var(--red);
+  background:var(--acc-bg); border:1px solid var(--acc-br); border-radius:12px;
+  padding:16px; margin:16px 0; font-size:14px; color:var(--acc);
   display:none; align-items:flex-start; gap:10px;
 }
 .error-bar.show { display:flex; }
@@ -168,7 +180,7 @@ body {
   display:flex; align-items:center; gap:8px; padding:0 0 16px;
   font-size:12px; color:var(--muted);
 }
-.legend-dot { width:10px; height:10px; border-radius:50%; background:var(--red); flex-shrink:0; }
+.legend-dot { width:10px; height:10px; border-radius:50%; background:var(--acc); flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -239,14 +251,12 @@ function setTheme(t) {
 function toggleTheme() { setTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark'); }
 
 // ── Keyword rules: title patterns → specific instruments ──
-// Applied BEFORE the generic currency mapping
-// Each rule: { pattern: RegExp, primary: [...], secondary: [...] }
 const KEYWORD_RULES = [
   // German-specific → GER40 primary
   { p:/german|germany|ifo|zew|buba|bundesbank|destatis/i,
     primary:['GER40'], secondary:['EURUSD','EURGBP'] },
-  // ECB / Euro area generic → broad EUR
-  { p:/ecb|european central bank|euro.?zone|euro.?area|eu |lagarde/i,
+  // ECB / Euro area generic
+  { p:/ecb|european central bank|euro.?zone|euro.?area|lagarde/i,
     primary:['EURUSD','EURGBP','GER40'], secondary:[] },
   // French-specific
   { p:/french|france/i,
@@ -254,12 +264,27 @@ const KEYWORD_RULES = [
   // Italian-specific
   { p:/italian|italy/i,
     primary:['EURUSD'], secondary:['GER40','EURGBP'] },
-  // US equity / indices
-  { p:/nonfarm|non-farm|nfp|fed |fomc|powell|jobless|cpi|ppi|gdp|retail sales|ism|pmi/i,
-    primary:['US500','US100'], secondary:['EURUSD','XAUUSD','USOIL','BTCUSD'] },
-  // Oil-specific
-  { p:/crude|oil|opec|petroleum|eia|energy|inventori/i,
+  // Oil inventories (Crude Oil Inventories, EIA Weekly)
+  { p:/crude oil inv|eia crude|oil inv|petroleum inv|cushing/i,
+    primary:['USOIL'], secondary:['US500','US100'] },
+  // Oil generic
+  { p:/crude|opec|petroleum|eia|oil price/i,
     primary:['USOIL'], secondary:['US500'] },
+  // Unemployment / jobless claims → USD + US indices
+  { p:/unemployment|jobless|initial claims|continuing claims/i,
+    primary:['US500','US100'], secondary:['EURUSD','XAUUSD','USOIL','BTCUSD','AUDJPY'] },
+  // NFP / major US macro
+  { p:/nonfarm|non-farm|nfp/i,
+    primary:['US500','US100','EURUSD','XAUUSD'], secondary:['USOIL','BTCUSD','AUDJPY'] },
+  // Fed / FOMC
+  { p:/fed |fomc|powell|federal reserve|interest rate decision/i,
+    primary:['US500','US100','XAUUSD','EURUSD'], secondary:['USOIL','BTCUSD','AUDJPY','EURGBP'] },
+  // US CPI / PPI / inflation
+  { p:/cpi|ppi|inflation|core.*price|price.*index/i,
+    primary:['US500','US100','XAUUSD'], secondary:['EURUSD','USOIL','BTCUSD'] },
+  // US GDP / retail / ISM / PMI (generic US)
+  { p:/gdp|retail sales|ism|flash.*pmi|services pmi|manufacturing pmi/i,
+    primary:['US500','US100'], secondary:['EURUSD','XAUUSD','USOIL','BTCUSD'] },
   // Gold / metals
   { p:/gold|silver|metal/i,
     primary:['XAUUSD'], secondary:[] },
@@ -267,7 +292,7 @@ const KEYWORD_RULES = [
   { p:/bitcoin|crypto|btc/i,
     primary:['BTCUSD'], secondary:[] },
   // BOE / UK
-  { p:/boe|bank of england|bailey|uk |united kingdom|british/i,
+  { p:/boe|bank of england|bailey|united kingdom|british/i,
     primary:['EURGBP'], secondary:['EURUSD'] },
   // RBA / Australia
   { p:/rba|reserve bank of australia|australian/i,
@@ -364,62 +389,64 @@ function parseEvents(xmlText) {
     }));
 }
 
-// ── Convert FF time (ET) to Rome time ──
+// ── Convert FF time (ET) to Rome time using Intl ──
 function toRomeTime(dateStr, timeStr) {
-  // FF dates: "01-20-2025", times: "8:30am" or "All Day" or "Tentative"
   if (!timeStr || timeStr === 'All Day' || timeStr === 'Tentative' || timeStr === '') {
-    return { display: timeStr || 'Tutto il giorno', isAllDay: true, dateObj: null };
+    return { display: 'Tutto il giorno', isAllDay: true, dateObj: null };
   }
 
-  // parse date MM-DD-YYYY
-  const [m, d, y] = dateStr.split('-').map(Number);
-  // parse time "8:30am"
+  // FF date: "03-24-2026", time: "8:30am"
+  const [mo, da, yr] = dateStr.split('-').map(Number);
   const match = timeStr.match(/^(\d+):(\d+)(am|pm)$/i);
   if (!match) return { display: timeStr, isAllDay: false, dateObj: null };
 
-  let hours = parseInt(match[1]);
-  const mins = parseInt(match[2]);
-  const ampm = match[3].toLowerCase();
-  if (ampm === 'pm' && hours !== 12) hours += 12;
-  if (ampm === 'am' && hours === 12) hours = 0;
+  let h = parseInt(match[1]);
+  const min = parseInt(match[2]);
+  const ap = match[3].toLowerCase();
+  if (ap === 'pm' && h !== 12) h += 12;
+  if (ap === 'am' && h === 12) h = 0;
 
-  // Build date in ET (UTC-5 standard, UTC-4 DST)
-  // Use Intl to get correct conversion
-  const etDate = new Date(Date.UTC(y, m-1, d, hours, mins));
-  // ET offset: approximate — FF uses Eastern Time
-  // Add 5h for ET→UTC (winter) — Intl handles DST properly
-  const etOffset = getETOffset(etDate);
-  const utcMs = etDate.getTime() + etOffset * 60000;
-  const utcDate = new Date(utcMs);
+  // Build a date string in ET timezone using Intl trick
+  // We create the date as if it's ET, then read it back in Rome
+  // Strategy: create ISO string, interpret as ET via explicit offset
+  // Get ET offset for this date using Intl
+  const testDate = new Date(yr, mo-1, da, h, min, 0);
+  
+  // Use Intl to find ET offset at this moment
+  const etFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  });
+  
+  // Get current UTC offset for ET
+  const now = new Date();
+  const utcStr = now.toLocaleString('en-US', {timeZone:'UTC', hour12:false});
+  const etStr  = now.toLocaleString('en-US', {timeZone:'America/New_York', hour12:false});
+  const utcParts = utcStr.match(/(\d+)\/(\d+)\/(\d+),\s+(\d+):(\d+):(\d+)/);
+  const etParts  = etStr.match(/(\d+)\/(\d+)\/(\d+),\s+(\d+):(\d+):(\d+)/);
+  
+  // Calculate ET→UTC offset in minutes using actual Intl data
+  const utcMs2 = Date.UTC(
+    parseInt(utcParts[3]), parseInt(utcParts[1])-1, parseInt(utcParts[2]),
+    parseInt(utcParts[4])%24, parseInt(utcParts[5]), parseInt(utcParts[6])
+  );
+  const etMs2 = Date.UTC(
+    parseInt(etParts[3]), parseInt(etParts[1])-1, parseInt(etParts[2]),
+    parseInt(etParts[4])%24, parseInt(etParts[5]), parseInt(etParts[6])
+  );
+  const etOffsetMs = utcMs2 - etMs2; // ms to add to ET to get UTC
 
-  // Format in Rome timezone
+  // Build UTC date from ET time
+  const etEventMs = Date.UTC(yr, mo-1, da, h, min, 0);
+  const utcDate = new Date(etEventMs + etOffsetMs);
+
   const romeStr = utcDate.toLocaleTimeString('it-IT', {
     timeZone: 'Europe/Rome',
     hour: '2-digit', minute: '2-digit', hour12: false
   });
 
   return { display: romeStr, isAllDay: false, dateObj: utcDate };
-}
-
-function getETOffset(date) {
-  // Returns minutes to add to ET to get UTC
-  // DST: second Sunday March → first Sunday November = UTC-4 (EDT)
-  // Otherwise UTC-5 (EST)
-  const y = date.getUTCFullYear();
-  // Second Sunday in March
-  const dstStart = nthSunday(y, 2, 2);
-  // First Sunday in November
-  const dstEnd   = nthSunday(y, 10, 1);
-  const isDST = date >= dstStart && date < dstEnd;
-  return isDST ? 4*60 : 5*60;
-}
-
-function nthSunday(year, month, n) {
-  // month: 0-indexed (2=March, 10=November)
-  const d = new Date(Date.UTC(year, month, 1, 2, 0, 0));
-  const dow = d.getUTCDay();
-  d.setUTCDate(1 + (7 - dow) % 7 + (n-1)*7);
-  return d;
 }
 
 // ── Group by date ──
@@ -494,7 +521,7 @@ function renderCalendar(events, monday, sunday) {
     });
 
     dayEvents.forEach(ev => {
-      const { display, isAllDay } = toRomeTime(ev.date, ev.time);
+      const { display, isAllDay, dateObj } = toRomeTime(ev.date, ev.time);
       const { instrs, primaries } = resolveInstruments(ev.currency, ev.title);
 
       let pillsHtml = '';
@@ -505,7 +532,9 @@ function renderCalendar(events, monday, sunday) {
         });
       }
 
-      html += `<div class="event-card">
+      const now = new Date();
+      const isPast = !isAllDay && dateObj && dateObj < now;
+      html += `<div class="event-card${isPast?' past':''}">
         <div class="event-top">
           <span class="event-time${isAllDay?' allday':''}">${display}</span>
           <span class="event-currency">${ev.currency}</span>
