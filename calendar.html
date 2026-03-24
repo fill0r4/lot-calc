@@ -335,9 +335,10 @@ function fmtWeekLabel(monday, sunday) {
   return monday.toLocaleDateString(loc, opts) + ' – ' + sunday.toLocaleDateString(loc, { ...opts, year:'numeric' });
 }
 
-// ── Fetch via allorigins proxy ──
+// ── Fetch via Vercel proxy ──
 async function fetchFF(url) {
-  const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+  const week = url.includes('nextweek') ? 'next' : 'this';
+  const proxy = 'https://lotcal-api.vercel.app/api/calendar?week=' + week;
   const res = await fetch(proxy, { cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.text();
