@@ -155,6 +155,19 @@ body {
 .event-card.past .instr-pill,
 .event-card.past .instr-pill.primary { background:transparent; border-color:var(--past-border); color:var(--past-text); opacity:0.4; }
 
+.event-time-wrap { display:inline-flex; flex-direction:column; gap:2px; }
+.event-utc {
+  font-size:10px; color:var(--faint); letter-spacing:0.02em;
+  cursor:pointer; -webkit-user-select:none; user-select:none;
+}
+/* Mobile tap-to-reveal UTC */
+.event-utc-full {
+  display:none; font-size:11px; background:var(--surface2);
+  color:var(--muted); padding:4px 10px; border-radius:6px;
+  margin-top:4px; border:1px solid var(--border);
+}
+.event-utc-full.visible { display:block; }
+
 .no-events {
   padding:20px 0 12px; font-size:13px; color:var(--faint); text-align:center;
 }
@@ -393,16 +406,35 @@ function parseEvents(xmlText) {
     }));
 }
 
-// ── Convert FF time (ET) to local browser time ──
-function toRomeTime(dateStr, timeStr) {
+// ── Convert FF time (ET) to UTC, then display in browser local timezone ──
+// Strategy: use Intl to find the exact ET offset for this specific date
+// (handles DST changes in both US and user's country automatically)
+function etToUtc(yr, mo, da, h, min) {
+  // Binary search: find UTC time X such that X in America/New_York == h:min on MM/DD/YYYY
+  // We use a simpler approach: create a candidate UTC date, check what ET shows, adjust
+  // ET is UTC-5 (EST) or UTC-4 (EDT). Try both, pick the one that matches.
+  for (const offsetH of [4, 5]) {
+    const candidate = new Date(Date.UTC(yr, mo-1, da, h + offsetH, min));
+    const etCheck = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric', minute: 'numeric', hour12: false
+    }).formatToParts(candidate);
+    const checkH = parseInt(etCheck.find(p => p.type === 'hour').value) % 24;
+    const checkM = parseInt(etCheck.find(p => p.type === 'minute').value);
+    if (checkH === h && checkM === min) return candidate;
+  }
+  // Fallback: assume EST (UTC-5)
+  return new Date(Date.UTC(yr, mo-1, da, h + 5, min));
+}
+
+function toLocalTime(dateStr, timeStr) {
   if (!timeStr || timeStr === 'All Day' || timeStr === 'Tentative' || timeStr === '') {
-    return { display: 'Tutto il giorno', isAllDay: true, dateObj: null };
+    return { display: 'All Day', utcDisplay: '', isAllDay: true, dateObj: null };
   }
 
-  // FF date: "03-24-2026", time: "8:30am"
   const [mo, da, yr] = dateStr.split('-').map(Number);
   const match = timeStr.match(/^(\d+):(\d+)(am|pm)$/i);
-  if (!match) return { display: timeStr, isAllDay: false, dateObj: null };
+  if (!match) return { display: timeStr, utcDisplay: '', isAllDay: false, dateObj: null };
 
   let h = parseInt(match[1]);
   const min = parseInt(match[2]);
@@ -410,35 +442,17 @@ function toRomeTime(dateStr, timeStr) {
   if (ap === 'pm' && h !== 12) h += 12;
   if (ap === 'am' && h === 12) h = 0;
 
-  // FF times are US Eastern Time (America/New_York)
-  // Convert ET→UTC using Intl: find what UTC time corresponds to this ET time
-  // We do this by creating a UTC date and adjusting for the ET offset
-  // Get ET offset at this specific date using Intl.DateTimeFormat
-  const probe = new Date(Date.UTC(yr, mo-1, da, h + 12, min)); // +12 to avoid date boundary issues
-  const etParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year:'numeric', month:'numeric', day:'numeric',
-    hour:'numeric', minute:'numeric', second:'numeric', hour12:false
-  }).formatToParts(probe);
+  const utcDate = etToUtc(yr, mo, da, h, min);
 
-  const etH = parseInt(etParts.find(p=>p.type==='hour').value) % 24;
-  const etMin = parseInt(etParts.find(p=>p.type==='minute').value);
-
-  // Offset = UTC hours - ET hours (at our probe point)
-  const probeUTCH = probe.getUTCHours();
-  let offsetH = probeUTCH - etH;
-  if (offsetH < 0) offsetH += 24;
-  if (offsetH > 12) offsetH -= 24;
-
-  // Build UTC date from ET time
-  const utcDate = new Date(Date.UTC(yr, mo-1, da, h + offsetH, min));
-
-  // Format using browser's local timezone and locale
-  const display = utcDate.toLocaleTimeString(navigator.language || 'it-IT', {
+  // Local time: use browser timezone automatically
+  const display = utcDate.toLocaleTimeString(navigator.language, {
     hour: '2-digit', minute: '2-digit', hour12: false
   });
 
-  return { display, isAllDay: false, dateObj: utcDate };
+  // UTC tooltip string
+  const utcDisplay = utcDate.toUTCString().replace(/:\d\d GMT/, ' UTC');
+
+  return { display, utcDisplay, isAllDay: false, dateObj: utcDate };
 }
 
 // ── Group by date ──
@@ -504,8 +518,8 @@ function renderCalendar(events, monday, sunday) {
 
     // Sort by time
     const dayEvents = grouped[dateStr].sort((a,b) => {
-      const ta = toRomeTime(a.date, a.time);
-      const tb = toRomeTime(b.date, b.time);
+      const ta = toLocalTime(a.date, a.time);
+      const tb = toLocalTime(b.date, b.time);
       if (ta.isAllDay) return -1;
       if (tb.isAllDay) return 1;
       if (!ta.dateObj || !tb.dateObj) return 0;
@@ -513,7 +527,7 @@ function renderCalendar(events, monday, sunday) {
     });
 
     dayEvents.forEach(ev => {
-      const { display, isAllDay, dateObj } = toRomeTime(ev.date, ev.time);
+      const { display, utcDisplay, isAllDay, dateObj } = toLocalTime(ev.date, ev.time);
       const { instrs, primaries } = resolveInstruments(ev.currency, ev.title);
 
       let pillsHtml = '';
@@ -526,9 +540,14 @@ function renderCalendar(events, monday, sunday) {
 
       const now = new Date();
       const isPast = !isAllDay && dateObj && dateObj < now;
+      const cardId = 'ev-' + Math.random().toString(36).slice(2,8);
       html += `<div class="event-card${isPast?' past':''}">
         <div class="event-top">
-          <span class="event-time${isAllDay?' allday':''}">${display}</span>
+          <div class="event-time-wrap">
+            <span class="event-time${isAllDay?' allday':''}" onclick="toggleUtc('${cardId}')">${display}</span>
+            ${utcDisplay ? `<span class="event-utc" onclick="toggleUtc('${cardId}')">UTC ↓</span>` : ''}
+            ${utcDisplay ? `<span class="event-utc-full" id="${cardId}">${utcDisplay}</span>` : ''}
+          </div>
           <span class="event-currency">${ev.currency}</span>
         </div>
         <div class="event-title">${ev.title}</div>
@@ -540,6 +559,13 @@ function renderCalendar(events, monday, sunday) {
   });
 
   body.innerHTML = html;
+}
+
+// ── Toggle UTC tooltip (mobile-friendly tap) ──
+function toggleUtc(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('visible');
 }
 
 // ── Main load ──
