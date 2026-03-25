@@ -252,12 +252,12 @@ body {
     <div class="input-card">
       <div class="irow">
         <label class="irow-label" for="capital">Capitale</label>
-        <input id="capital" type="text" inputmode="text" placeholder="10000" autocomplete="off" autocorrect="off" spellcheck="false">
+        <input id="capital" type="text" inputmode="decimal" placeholder="10000" autocomplete="off" autocorrect="off" spellcheck="false">
         <span class="irow-unit">USD</span>
       </div>
       <div class="irow">
         <label class="irow-label" for="risk">Rischio</label>
-        <input id="risk" type="text" inputmode="text" placeholder="1.00" autocomplete="off" autocorrect="off" spellcheck="false">
+        <input id="risk" type="text" inputmode="decimal" placeholder="1.00" autocomplete="off" autocorrect="off" spellcheck="false">
         <span class="irow-unit">%</span>
       </div>
     </div>
@@ -268,11 +268,11 @@ body {
     <div class="price-pair">
       <div class="price-card">
         <div class="price-card-label">Entry</div>
-        <input id="entry" type="text" inputmode="text" placeholder="0.00" autocomplete="off" autocorrect="off" spellcheck="false">
+        <input id="entry" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" autocorrect="off" spellcheck="false">
       </div>
       <div class="price-card">
         <div class="price-card-label sl">SL / Exit</div>
-        <input id="exitp" type="text" inputmode="text" placeholder="0.00" autocomplete="off" autocorrect="off" spellcheck="false">
+        <input id="exitp" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" autocorrect="off" spellcheck="false">
       </div>
     </div>
   </div>
@@ -323,29 +323,26 @@ body {
 </div>
 
 <script>
-// ── Comma intercept: Safari-compatible ──
+// ── Detect local decimal separator ──
+const localDecimal = (1.1).toLocaleString(navigator.language).replace(/\d/g,'')[0] || '.';
+
+// ── Normalize input: always convert to dot for parseFloat ──
+function normalizeDecimal(str) {
+  if (localDecimal === ',') return str.replace(/,/g, '.');
+  return str;
+}
+
+// ── Input sanitization: allow only digits + local decimal separator ──
 ['capital','risk','entry','exitp'].forEach(id => {
   const el = document.getElementById(id);
-
-  // beforeinput fires BEFORE the char is inserted — works on Safari iOS
-  el.addEventListener('beforeinput', function(e) {
-    if (e.data === ',') {
-      e.preventDefault();
-      const start = this.selectionStart;
-      const end   = this.selectionEnd;
-      const v     = this.value;
-      this.value  = v.slice(0, start) + '.' + v.slice(end);
-      this.setSelectionRange(start + 1, start + 1);
-    }
-  });
-
-  // fallback: input event for any remaining commas
   el.addEventListener('input', function() {
+    // Allow only digits and the local decimal separator
+    const allowed = new RegExp('[^0-9' + (localDecimal === ',' ? ',' : '\.') + ']', 'g');
     const pos = this.selectionStart;
-    const neu = this.value.replace(/,/g, '.');
+    const neu = this.value.replace(allowed, '');
     if (neu !== this.value) {
       this.value = neu;
-      try { this.setSelectionRange(pos, pos); } catch(e) {}
+      try { this.setSelectionRange(pos-1, pos-1); } catch(e) {}
     }
   });
 });
@@ -390,7 +387,7 @@ const CFG = {
 };
 
 function getVal(id) {
-  return parseFloat(document.getElementById(id).value.replace(',','.'));
+  return parseFloat(normalizeDecimal(document.getElementById(id).value));
 }
 function getRisk(key, lots, pipDist, pDiff) {
   const c = CFG[key];

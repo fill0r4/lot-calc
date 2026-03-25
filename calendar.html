@@ -22,6 +22,7 @@
   --acc-soft:#fffdf0; --text:#1c1c1e; --muted:#6b6b6b; --faint:#aeaeb2;
   --toggle-bg:#e5e5ea; --day-bg:#f8f8fb; --pill-bg:#e8e8ed; --pill-text:#555;
   --past-bg:#f5f5f7; --past-br:#e5e5ea; --past-text:#aeaeb2; --past-border:#e5e5ea;
+  --acc-faded:#c4892a; --acc-faded-bg:#fef9ee; --acc-faded-br:#fde8aa;
 }
 
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -392,14 +393,13 @@ function parseEvents(xmlText) {
     }));
 }
 
-// ── Convert FF time (ET) to Rome time ──
-// Key insight: FF times are in US Eastern Time.
-// We binary-search for the UTC time that, when displayed in ET, matches the given time.
+// ── Convert FF time (ET) to local browser time ──
 function toRomeTime(dateStr, timeStr) {
   if (!timeStr || timeStr === 'All Day' || timeStr === 'Tentative' || timeStr === '') {
     return { display: 'Tutto il giorno', isAllDay: true, dateObj: null };
   }
 
+  // FF date: "03-24-2026", time: "8:30am"
   const [mo, da, yr] = dateStr.split('-').map(Number);
   const match = timeStr.match(/^(\d+):(\d+)(am|pm)$/i);
   if (!match) return { display: timeStr, isAllDay: false, dateObj: null };
@@ -410,48 +410,35 @@ function toRomeTime(dateStr, timeStr) {
   if (ap === 'pm' && h !== 12) h += 12;
   if (ap === 'am' && h === 12) h = 0;
 
-  // Step 1: build a UTC candidate assuming ET = UTC-5 (EST)
-  // Then correct using actual Intl offset for that specific date
-  const estGuess = Date.UTC(yr, mo-1, da, h + 5, min, 0);
-  
-  // Step 2: check what ET clock shows for that UTC moment
-  const fmt = new Intl.DateTimeFormat('en-US', {
+  // FF times are US Eastern Time (America/New_York)
+  // Convert ET→UTC using Intl: find what UTC time corresponds to this ET time
+  // We do this by creating a UTC date and adjusting for the ET offset
+  // Get ET offset at this specific date using Intl.DateTimeFormat
+  const probe = new Date(Date.UTC(yr, mo-1, da, h + 12, min)); // +12 to avoid date boundary issues
+  const etParts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
-    hour: '2-digit', minute: '2-digit', hour12: false
-  });
-  
-  // Iteratively correct: try EST offset, check if ET display matches, adjust if DST
-  function getETHour(utcMs) {
-    const parts = fmt.formatToParts(new Date(utcMs));
-    const hh = parseInt(parts.find(p=>p.type==='hour').value) % 24;
-    const mm = parseInt(parts.find(p=>p.type==='minute').value);
-    return { hh, mm };
-  }
-  
-  // Try both EST (-5) and EDT (-4)
-  const tryEST = Date.UTC(yr, mo-1, da, h + 5, min, 0);
-  const tryEDT = Date.UTC(yr, mo-1, da, h + 4, min, 0);
-  
-  let utcDate;
-  const estCheck = getETHour(tryEST);
-  if (estCheck.hh === h && estCheck.mm === min) {
-    utcDate = new Date(tryEST);
-  } else {
-    const edtCheck = getETHour(tryEDT);
-    if (edtCheck.hh === h && edtCheck.mm === min) {
-      utcDate = new Date(tryEDT);
-    } else {
-      // fallback: use EST
-      utcDate = new Date(tryEST);
-    }
-  }
+    year:'numeric', month:'numeric', day:'numeric',
+    hour:'numeric', minute:'numeric', second:'numeric', hour12:false
+  }).formatToParts(probe);
 
-  const romeStr = utcDate.toLocaleTimeString('it-IT', {
-    timeZone: 'Europe/Rome',
+  const etH = parseInt(etParts.find(p=>p.type==='hour').value) % 24;
+  const etMin = parseInt(etParts.find(p=>p.type==='minute').value);
+
+  // Offset = UTC hours - ET hours (at our probe point)
+  const probeUTCH = probe.getUTCHours();
+  let offsetH = probeUTCH - etH;
+  if (offsetH < 0) offsetH += 24;
+  if (offsetH > 12) offsetH -= 24;
+
+  // Build UTC date from ET time
+  const utcDate = new Date(Date.UTC(yr, mo-1, da, h + offsetH, min));
+
+  // Format using browser's local timezone and locale
+  const display = utcDate.toLocaleTimeString(navigator.language || 'it-IT', {
     hour: '2-digit', minute: '2-digit', hour12: false
   });
 
-  return { display: romeStr, isAllDay: false, dateObj: utcDate };
+  return { display, isAllDay: false, dateObj: utcDate };
 }
 
 // ── Group by date ──
